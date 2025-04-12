@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Étape 1 : Cloner le dépôt
+
+      # Étape 2 : Obtenir la date (format adapté pour cache)
+      - name: Obtenir la Date
+        id: get-date
+        run: |
+          echo "date=$(date -u '+%Y%m%d')" >> $GITHUB_ENV
+        shell: bash
+
+      # Étape 3 : Mettre en cache le répertoire global de Buildozer
+      - name: Cacher le répertoire global de Buildozer
+        uses: actions/cache@v3
+        with:
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+      # Étape 4 : Mettre en cache le répertoire Buildozer local
+      - name: Cacher le répertoire local de Buildozer
+        uses: actions/cache@v3
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-${{ env.date }}-${{ hashFiles('buildozer.spec') }}
+
+      # Étape 5 : Construire avec Buildozer
+      - name: Construire avec Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          buildozer_version: stable
+
+      # Étape 6 : Téléverser les artefacts
+      - name: Téléverser les artefacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: package
+          path: ${{ steps.buildozer.outputs.filename }}
